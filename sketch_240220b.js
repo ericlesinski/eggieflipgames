@@ -17,7 +17,7 @@ var minBallDistance = 150; // Adjust this value based on your needs
 
 var lifeMeter = -150;
 
-var gameActive = true; // Added variable to track the game state
+var gameActive = false; // Added variable to track the game state
 
 var shakeIntensity = 10;
 var shakeDuration = 200; // milliseconds
@@ -179,16 +179,45 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  if (currentState === GameState.TITLE) {
-    // Check if the click is within the "Play" text bounds
-    // This is a simple way; for better UX, consider checking x and y coordinates
-    let playTextWidth = textWidth('Play');
-    let playTextX = (width - playTextWidth) / 2;
-    let playTextY = height / 2 + 20;
-    
-    if (mouseX >= playTextX && mouseX <= playTextX + playTextWidth &&
-        mouseY >= playTextY - 10 && mouseY <= playTextY + 10) { // Adjust bounds as needed
-      currentState = GameState.PLAYING;
+  if (gameActive) { // Ensure the game is active
+    var d = dist(mouseX, mouseY, targetX, targetY);
+    if (d < targetSize / 2) { // Check if the click is within the target
+      // Similar to the previous keyPressed function, iterate through balls
+      var hitDetected = false;
+      for (var i = 0; i < balls.length; i++) {
+        var ballDistance = dist(balls[i].x, balls[i].y, targetX, targetY);
+        var combinedRadius = balls[i].diameter / 2 + targetSize / 2;
+
+        if (ballDistance < combinedRadius) {
+          // Ball hit detected
+          score += 25; // Adjust score accordingly
+          flashEndTime = millis() + flashDuration; // Trigger flash effect
+          balls.splice(i, 1); // Remove the ball
+          hitDetected = true;
+          break; // Exit loop after a hit
+        }
+      }
+
+      // Penalize if no hit is detected
+      if (!hitDetected) {
+        lifeMeter -= 5; // Assuming you want to decrease life for a miss
+        // You might want to trigger the screen shake here as well
+        shakeEndTime = millis() + shakeDuration;
+      }
+    }
+  } else {
+    if (currentState === GameState.TITLE) {
+      // Check if the click is within the "Play" text bounds
+      // This is a simple way; for better UX, consider checking x and y coordinates
+      let playTextWidth = textWidth('Play');
+      let playTextX = (width - playTextWidth) / 2;
+      let playTextY = height / 2 + 20;
+      
+      if (mouseX >= playTextX && mouseX <= playTextX + playTextWidth &&
+          mouseY >= playTextY - 10 && mouseY <= playTextY + 10) { // Adjust bounds as needed
+        currentState = GameState.PLAYING;
+        gameActive = true;
+      }
     }
   }
 }
