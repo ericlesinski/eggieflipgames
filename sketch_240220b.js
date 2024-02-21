@@ -23,7 +23,7 @@ var shakeIntensity = 10;
 var shakeDuration = 200; // milliseconds
 var shakeEndTime = 0;
 
-var gameSpeed = 7;
+var gameSpeed = 10;
 
 function setup() {
   createCanvas(400, canvasHeight);
