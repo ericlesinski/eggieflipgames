@@ -200,7 +200,7 @@ function mousePressed() {
 
       // Penalize if no hit is detected
       if (!hitDetected) {
-        lifeMeter -= 5; // Assuming you want to decrease life for a miss
+        lifeMeter += 5; // Assuming you want to decrease life for a miss
         // You might want to trigger the screen shake here as well
         shakeEndTime = millis() + shakeDuration;
       }
