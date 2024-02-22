@@ -1,7 +1,3 @@
-canvasHeight = 600;
-
-var bX = 200;
-var bY = 0;
 var score = 0;
 var missedCount = 0;
 var flashDuration = 100; // milliseconds (shortened for quicker flashing)
@@ -9,118 +5,138 @@ var flashEndTime = 0;
 
 var balls = [];
 
-var targetX = 200;
-var targetY = 475;
+var playAreaX = 0;
+var playAreaY = 0;
+var playAreaWidth = 400; // Adjust as needed
+var playAreaHeight = 600; // Adjust as needed
+
+var targetX = playAreaX + playAreaWidth / 2;
+var targetY = playAreaY + playAreaHeight * 0.8;
 var targetSize = 50;
 
 var minBallDistance = 150; // Adjust this value based on your needs
 
 var lifeMeter = -150;
 
-var gameActive = false; // Added variable to track the game state
-
 var shakeIntensity = 10;
 var shakeDuration = 200; // milliseconds
 var shakeEndTime = 0;
 
-var gameSpeed = 5;
+var gameSpeed = 6;
 
-var increaseSpeedScoreThreshold = 500; // Increase speed for every 100 points scored
+var increaseSpeedScoreThreshold = 150; // Increase speed for every 100 points scored
 var lastSpeedIncreaseScore = 0; // Track the score at the last speed increase
+
+let baseInterval = 800; // Base interval in milliseconds
+let randomFactor = 500; // Maximum random variation in milliseconds
+let lastBallTime = 0; // Variable to track the time of the last ball creation
 
 // Define game states
 const GameState = {
   TITLE: 'title',
   PLAYING: 'playing',
+  GAMEOVER: 'gameover'
 };
 
 // Set the initial state
 let currentState = GameState.TITLE;
 
+let mySound;
+let amplitude;
+
+function preload() {
+  mySound = loadSound('assets/sandstorm.mp3');
+}
+
+
 function setup() {
-  createCanvas(400, canvasHeight);
+  createCanvas(playAreaWidth, playAreaHeight);
+  amplitude = new p5.Amplitude();
+  mySound.setVolume(0.1);
 }
 
 function draw() {
   background(220);
-if (currentState === GameState.TITLE) {
+  if (currentState === GameState.TITLE) {
     // Display title screen
     drawTitleScreen();
   } else if (currentState === GameState.PLAYING) {
-    if (gameActive) {
-     textSize(12); 
-     textAlign(LEFT, BASELINE);
-      if (balls.length === 0 && score - lastSpeedIncreaseScore >= increaseSpeedScoreThreshold) {
-        gameSpeed += 1; // Increase the game speed
-        lastSpeedIncreaseScore = score; // Update last speed increase score
-      }
-      
-      // Create a new ball with a certain probability and minimum distance
-      if (random() < 0.04) {
-        if (!balls.length || (millis() - balls[balls.length - 1].creationTime > minBallDistance)) {
-          var newBall = new Ball(bX, 0, gameSpeed);
-          balls.push(newBall);
-          newBall.creationTime = millis();
-        }
-      }
-  
-      // Update and display each ball
-      for (var i = balls.length - 1; i >= 0; i--) {
-        balls[i].update();
-        balls[i].display();
-  
-        // Remove the ball if it's out of the canvas and decrease the life meter
-        if (balls[i].offScreen()) {
-          missedCount += 1;
-          balls.splice(i, 1);
-          lifeMeter += 10; // Decrease the life meter when a ball is missed
-        }
-      }
-  
-      // Draw yellow circle behind the target
-      if (millis() < flashEndTime) {
-        var flashAlpha = map(millis(), flashEndTime - flashDuration, flashEndTime, 255, 0);
-        noStroke(); // Remove outline
-        fill(255, 255, 0, flashAlpha); // Yellow ring with varying transparency
-        ellipse(targetX, targetY, targetSize + 20, targetSize + 20);
-      }
-  
-      // Draw target
-      stroke(0, 0, 0);
-      fill(255, 0, 0);
-      ellipse(targetX, targetY, targetSize, targetSize);
+    textSize(12);
+    textAlign(LEFT, BASELINE);
     
-      // Draw score for game 
-      //textSize(12);
-      fill(0, 0, 0);
-      text('Your Score', 300, 160);
-      text(score, 300, 180);
-  
-      // Draw score for missed balls
-      fill(0, 0, 0);
-      text('Missed', 300, 210);
-      text(missedCount, 300, 230);
-  
-       // Draw life meter with shake effect
-      fill(0, 0, 0);
-      text('Life', 300, 415);
-      fill(255, 0, 0);
-      var shakeOffsetX = 0;
-      var shakeOffsetY = 0;
-  
-      if (millis() < shakeEndTime) {
-        shakeOffsetX = random(-shakeIntensity, shakeIntensity);
-        shakeOffsetY = random(-shakeIntensity, shakeIntensity);
-      }
-  
-      rect(300 + shakeOffsetX, 400 + shakeOffsetY, 20, lifeMeter);
-      // Check if life meter is zero
-      if (lifeMeter >= 0) {
-        endGame();
-      }
-    } else {
-      drawGameOver();
+    if ((score - lastSpeedIncreaseScore) >= increaseSpeedScoreThreshold) {
+      gameSpeed += 1; // Increase the game speed
+      lastSpeedIncreaseScore = score; // Update last speed increase score
     }
+
+    // Create a new ball based on the interval with random variation
+    if (millis() - lastBallTime > baseInterval) {
+      var newBall = new Ball(targetX, 0, gameSpeed);
+      balls.push(newBall);
+      newBall.creationTime = millis();
+      lastBallTime = millis() - random(randomFactor); // Introduce random variation
+    }
+
+    // Update and display each ball
+    for (var i = balls.length - 1; i >= 0; i--) {
+      balls[i].update();
+      balls[i].display();
+
+      // Remove the ball if it's out of the canvas and decrease the life meter
+      if (balls[i].offScreen()) {
+        missedCount += 1;
+        balls.splice(i, 1);
+        lifeMeter += 10; // Decrease the life meter when a ball is missed
+      }
+    }
+
+    // Draw yellow circle behind the target
+    if (millis() < flashEndTime) {
+      var flashAlpha = map(millis(), flashEndTime - flashDuration, flashEndTime, 255, 0);
+      noStroke(); // Remove outline
+      fill(255, 255, 0, flashAlpha); // Yellow ring with varying transparency
+      ellipse(targetX, targetY, targetSize + 20, targetSize + 20);
+    }
+
+    // Draw target dynamically
+    stroke(0, 0, 0);
+    fill(255, 0, 0);
+    ellipse(targetX, targetY, targetSize, targetSize);
+
+    // Draw score for game dynamically
+    fill(0, 0, 0);
+    text('Your Score', width - 100, height - 440);
+    text(score, width - 100, height - 420);
+
+    // Draw score for missed balls dynamically
+    fill(0, 0, 0);
+    text('Missed', width - 100, height - 390);
+    text(missedCount, width - 100, height - 370);
+
+    // Draw life meter with shake effect dynamically
+    fill(0, 0, 0);
+    text('Life', width - 100, height - 185);
+    fill(255, 0, 0);
+    var shakeOffsetX = 0;
+    var shakeOffsetY = 0;
+
+    if (millis() < shakeEndTime) {
+      shakeOffsetX = random(-shakeIntensity, shakeIntensity);
+      shakeOffsetY = random(-shakeIntensity, shakeIntensity);
+    }
+
+    rect(width - 100 + shakeOffsetX, height - 200 + shakeOffsetY, 20, lifeMeter);
+    // Check if life meter is zero
+    if (lifeMeter >= 0) {
+      endGame();
+    }
+    
+    //DEBUG AREA
+    //text(gameSpeed, 5, 20);
+    
+    
+  } else {
+    drawGameOver();
   }
 }
 
@@ -129,7 +145,7 @@ function drawGameOver() {
   textSize(32);
   fill(0);
   text('Game Over', width / 2, height / 2);
-  
+
   textSize(12);
   fill(0, 0, 0);
   text('Your Score', width / 2, (height / 2) + 30);
@@ -146,11 +162,11 @@ function drawTitleScreen() {
 }
 
 function endGame() {
-  gameActive = false;
+  currentState = GameState.GAMEOVER;
 }
 
 function keyPressed() {
-  if (key === ' ' && gameActive) {
+  if (key === ' ' && currentState === GameState.PLAYING) {
     // Check if there is a falling ball on the target
     var hitDetected = false;
 
@@ -171,7 +187,7 @@ function keyPressed() {
     // If no hit is detected, penalize the player by decreasing the life meter
     if (!hitDetected) {
       lifeMeter += 5;
-      
+
       // Trigger screen shake effect
       shakeEndTime = millis() + shakeDuration;
     }
@@ -179,7 +195,7 @@ function keyPressed() {
 }
 
 function mousePressed() {
-  if (gameActive) { // Ensure the game is active
+  if (currentState === GameState.PLAYING) { // Ensure the game is active
     var d = dist(mouseX, mouseY, targetX, targetY);
     if (d < targetSize / 2) { // Check if the click is within the target
       // Similar to the previous keyPressed function, iterate through balls
@@ -212,12 +228,14 @@ function mousePressed() {
       let playTextWidth = textWidth('Play');
       let playTextX = (width - playTextWidth) / 2;
       let playTextY = height / 2 + 20;
-      
+
       if (mouseX >= playTextX && mouseX <= playTextX + playTextWidth &&
           mouseY >= playTextY - 10 && mouseY <= playTextY + 10) { // Adjust bounds as needed
         currentState = GameState.PLAYING;
-        gameActive = true;
       }
+      
+      // Start playing the sound when transitioning to the playing state
+      mySound.play();
     }
   }
 }
@@ -241,6 +259,6 @@ function Ball(x, y, speed) {
   };
 
   this.offScreen = function () {
-    return this.y > canvasHeight + this.diameter / 2;
+    return this.y > playAreaHeight + this.diameter / 2;
   };
 }
